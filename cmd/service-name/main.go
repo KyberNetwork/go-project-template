@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
+	"go.uber.org/zap"
 
 	libapp "github.com/KyberNetwork/go-project-template/pkg/app"
 )
@@ -20,11 +21,14 @@ func main() {
 }
 
 func run(c *cli.Context) error {
-	_, flush, err := libapp.NewSugaredLogger(c)
+	logger, _, flush, err := libapp.NewLogger(c)
 	if err != nil {
 		return err
 	}
 	defer flush()
+	zap.ReplaceGlobals(logger)
+	l := logger.Sugar()
+	l.Infow("app starting ..")
 	// TODO: add logic here
 	return nil
 }

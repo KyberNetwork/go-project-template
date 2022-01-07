@@ -12,7 +12,7 @@ on:
 jobs:
   prepare:
     name: Prepare
-    runs-on: [self-hosted, Linux]
+    runs-on: ubuntu-18.04
     outputs:
       current_branch: ${{ steps.current_branch.outputs.value }}
       commit_tag: ${{ steps.commit_tag.outputs.value }}
@@ -50,7 +50,7 @@ jobs:
   lint:
     name: Run golangci-lint
     needs: [prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
@@ -62,7 +62,7 @@ jobs:
   test:
     name: Run unit tests
     needs: [prepare]
-    runs-on: [self-hosted, Linux]
+    runs-on: ubuntu-18.04
     # start postgresql as a container, copy from docker-compose.yml
     services:
       postgres:
@@ -86,5 +86,7 @@ jobs:
         with:
           go-version: "1.17" # The Go version to download (if necessary) and use.
 
+      - name: Check out code
+        uses: actions/checkout@v2
       - name: Run
         run: go test -v ./...
