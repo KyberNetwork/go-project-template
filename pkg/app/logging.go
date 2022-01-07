@@ -48,7 +48,7 @@ func NewSentryFlags() []cli.Flag {
 		}, cli.StringFlag{
 			Name:   cclogName,
 			Usage:  "cclog-name",
-			Value:  "cex-account-data",
+			Value:  "sample-cclog-name",
 			EnvVar: "CCLOG_NAME",
 		},
 	}
@@ -69,7 +69,7 @@ func NewFlusher(s syncer) func() {
 
 // NewLogger creates a new logger instance.
 // The type of logger instance will be different with different application running modes.
-func NewLogger(c *cli.Context) (*zap.Logger, error) {
+func newLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel) {
 	var writers = []io.Writer{os.Stdout}
 	logAddr := c.GlobalString(ccLogAddr)
 	logName := c.GlobalString(cclogName)
@@ -80,28 +80,23 @@ func NewLogger(c *cli.Context) (*zap.Logger, error) {
 		writers = append(writers, &UnescapeWriter{w: ccw})
 	}
 	w := io.MultiWriter(writers...)
-	mode := c.GlobalString(modeFlag)
-	switch mode {
-	case productionMode:
-		encoder := zapcore.NewConsoleEncoder(zap.NewProductionEncoderConfig())
-		return zap.New(zapcore.NewCore(encoder, zapcore.AddSync(w), zap.DebugLevel), zap.AddCaller()), nil
-	case developmentMode:
-		encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
-		return zap.New(zapcore.NewCore(encoder, zapcore.AddSync(w), zap.DebugLevel), zap.AddCaller()), nil
-	default:
-		return nil, fmt.Errorf("invalid running mode: %q", mode)
-	}
+
+	atom := zap.NewAtomicLevelAt(zap.DebugLevel)
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = zapcore.RFC3339TimeEncoder
+	config.CallerKey = "caller"
+	encoder := zapcore.NewConsoleEncoder(config)
+	cc := zap.New(zapcore.NewCore(encoder, zapcore.AddSync(w), atom), zap.AddCaller())
+	return cc, atom
 }
 
-// NewSugaredLogger creates a new sugared logger and a flush function. The flush function should be
+// NewLogger creates a new sugared logger and a flush function. The flush function should be
 // called by consumer before quitting application.
 // This function should be use most of the time unless
 // the application requires extensive performance, in this case use NewLogger.
-func NewSugaredLogger(c *cli.Context) (*zap.SugaredLogger, func(), error) {
-	logger, err := NewLogger(c)
-	if err != nil {
-		return nil, nil, err
-	}
+func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
+
+	logger, atom := newLogger(c)
 	// init sentry if flag dsn exists
 	if len(c.String(sentryDSNFlag)) != 0 {
 		sentryClient, err := sentry.NewClient(
@@ -110,7 +105,7 @@ func NewSugaredLogger(c *cli.Context) (*zap.SugaredLogger, func(), error) {
 			},
 		)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to init sentry client")
+			return nil, atom, nil, errors.Wrap(err, "failed to init sentry client")
 		}
 
 		cfg := zapsentry.Configuration{
@@ -126,16 +121,15 @@ func NewSugaredLogger(c *cli.Context) (*zap.SugaredLogger, func(), error) {
 		case fatalLevel:
 			cfg.Level = zapcore.FatalLevel
 		default:
-			return nil, nil, errors.Errorf("invalid log level %v", c.String(sentryLevelFlag))
+			return nil, atom, nil, errors.Errorf("invalid log level %v", c.String(sentryLevelFlag))
 		}
 
 		core, err := zapsentry.NewCore(cfg, zapsentry.NewSentryClientFromClient(sentryClient))
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to init zap sentry")
+			return nil, atom, nil, errors.Wrap(err, "failed to init zap sentry")
 		}
 		// attach to logger core
 		logger = zapsentry.AttachCoreToLogger(core, logger)
 	}
-	sugar := logger.Sugar()
-	return sugar, NewFlusher(logger), nil
+	return logger, atom, NewFlusher(logger), nil
 }
