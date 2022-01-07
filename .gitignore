@@ -1,0 +1,2 @@
+# ignore all other file in cmd directory except .go files
+!*/cmd/*/*.go

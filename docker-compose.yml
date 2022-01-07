@@ -1,0 +1,12 @@
+version: '3.1'
+services:
+  postgres:
+    image: 'postgres:12-alpine'
+    volumes:
+      - './data/postgres:/var/lib/postgresql/data'
+    environment:
+      POSTGRES_DB: go_project_template
+      POSTGRES_USER: go_project_template 
+      POSTGRES_PASSWORD: go_project_template 
+    ports:
+      - '127.0.0.1:5432:5432'

@@ -1,0 +1,90 @@
+name: Go Project CI 
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: [self-hosted, Linux]
+    outputs:
+      current_branch: ${{ steps.current_branch.outputs.value }}
+      commit_tag: ${{ steps.commit_tag.outputs.value }}
+      version_tag: ${{ steps.version_tag.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Extract branch
+        shell: bash
+        id: current_branch
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          if [[ "$GITHUB_REF" =~ refs/tags ]]; then
+            raw=$(git branch -r --contains ${{ github.ref }})
+            BRANCH=${raw/origin\/}
+          fi
+          echo "::set-output name=value::$BRANCH"
+
+      - name: Get Git Commit Tag
+        shell: bash
+        id: commit_tag
+        run: |
+          COMMIT_HASH="$(echo $GITHUB_SHA | head -c7)"
+          echo "::set-output name=value::$COMMIT_HASH"
+
+      - name: Get version tag
+        id: version_tag
+        run: |
+          [[ "$GITHUB_REF" =~ refs/tags ]] || exit 0
+          echo "::set-output name=value::${GITHUB_REF#refs/tags/}"
+
+  lint:
+    name: Run golangci-lint
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+          version: v1.42.1
+
+  test:
+    name: Run unit tests
+    needs: [prepare]
+    runs-on: [self-hosted, Linux]
+    # start postgresql as a container, copy from docker-compose.yml
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_DB: go_project_template # TODO: update this field 
+          POSTGRES_USER: go_project_template # TODO: update this field 
+          POSTGRES_PASSWORD: go_project_template # TODO: update this field 
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - "127.0.0.1:5432:5432"
+
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.17" # The Go version to download (if necessary) and use.
+
+      - name: Run
+        run: go test -v ./...
