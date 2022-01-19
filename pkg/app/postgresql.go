@@ -1,61 +1,67 @@
 package app
 
 import (
-	"fmt"
-
+	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // sql driver name: "postgres"
 	"github.com/urfave/cli"
 )
 
 const (
-	postgresHostFlag    = "postgres-host"
-	defaultPostgresHost = "127.0.0.1"
+	PostgresHostFlag    = "postgres-host"
+	DefaultPostgresHost = "127.0.0.1"
 
-	postgresPortFlag    = "postgres-port"
-	defaultPostgresPort = 5432
+	PostgresPortFlag    = "postgres-port"
+	DefaultPostgresPort = 5432
 
-	postgresUserFlag    = "postgres-user"
-	defaultPostgresUser = "go_project_template"
+	PostgresUserFlag    = "postgres-user"
+	DefaultPostgresUser = "go_project_template"
 
-	postgresPasswordFlag    = "postgres-password"
-	defaultPostgresPassword = "go_project_template"
+	PostgresPasswordFlag    = "postgres-password"
+	DefaultPostgresPassword = "go_project_template"
 
-	postgresDatabaseFlag = "postgres-database"
+	PostgresDatabaseFlag = "postgres-database"
+
+	PostgresMigrationPath = "migration-path"
 )
 
-// NewPostgreSQLFlags creates new cli flags for PostgreSQL client.
-func NewPostgreSQLFlags(defaultDB string) []cli.Flag {
+// PostgresSQLFlags creates new cli flags for PostgreSQL client.
+func PostgresSQLFlags(defaultDB string) []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
-			Name:   postgresHostFlag,
-			Usage:  "PostgreSQL host to connect",
+			Name:   PostgresHostFlag,
+			Usage:  "PostgresSQL host to connect",
 			EnvVar: "POSTGRES_HOST",
-			Value:  defaultPostgresHost,
+			Value:  DefaultPostgresHost,
 		},
 		cli.IntFlag{
-			Name:   postgresPortFlag,
-			Usage:  "PostgreSQL port to connect",
+			Name:   PostgresPortFlag,
+			Usage:  "PostgresSQL port to connect",
 			EnvVar: "POSTGRES_PORT",
-			Value:  defaultPostgresPort,
+			Value:  DefaultPostgresPort,
 		},
 		cli.StringFlag{
-			Name:   postgresUserFlag,
-			Usage:  "PostgreSQL user to connect",
+			Name:   PostgresUserFlag,
+			Usage:  "PostgresSQL user to connect",
 			EnvVar: "POSTGRES_USER",
-			Value:  defaultPostgresUser,
+			Value:  DefaultPostgresUser,
 		},
 		cli.StringFlag{
-			Name:   postgresPasswordFlag,
-			Usage:  "PostgreSQL password to connect",
+			Name:   PostgresPasswordFlag,
+			Usage:  "PostgresSQL password to connect",
 			EnvVar: "POSTGRES_PASSWORD",
-			Value:  defaultPostgresPassword,
+			Value:  DefaultPostgresPassword,
 		},
 		cli.StringFlag{
-			Name:   postgresDatabaseFlag,
+			Name:   PostgresDatabaseFlag,
 			Usage:  "Postgres database to connect",
 			EnvVar: "POSTGRES_DATABASE",
 			Value:  defaultDB,
+		},
+		cli.StringFlag{
+			Name:   PostgresMigrationPath,
+			Value:  "migrations",
+			EnvVar: "MIGRATION_PATH",
 		},
 	}
 }
@@ -63,12 +69,13 @@ func NewPostgreSQLFlags(defaultDB string) []cli.Flag {
 // NewDBFromContext creates a DB instance from cli flags configuration.
 func NewDBFromContext(c *cli.Context) (*sqlx.DB, error) {
 	const driverName = "postgres"
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		c.String(postgresHostFlag),
-		c.Int(postgresPortFlag),
-		c.String(postgresUserFlag),
-		c.String(postgresPasswordFlag),
-		c.String(postgresDatabaseFlag),
-	)
+	connStr := dbutil.FormatDSN(map[string]string{
+		"host":     c.String(PostgresHostFlag),
+		"port":     c.String(PostgresPortFlag),
+		"user":     c.String(PostgresUserFlag),
+		"password": c.String(PostgresPasswordFlag),
+		"dbname":   c.String(PostgresDatabaseFlag),
+		"sslmode":  "disable",
+	})
 	return sqlx.Connect(driverName, connStr)
 }
