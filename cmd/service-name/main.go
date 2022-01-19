@@ -4,6 +4,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
+	"github.com/KyberNetwork/go-project-template/pkg/storage"
+	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 
@@ -11,6 +14,7 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load("sample_file.env")
 	app := libapp.NewApp()
 	app.Name = "alert service go script runner"
 	app.Action = run
@@ -29,6 +33,15 @@ func run(c *cli.Context) error {
 	zap.ReplaceGlobals(logger)
 	l := logger.Sugar()
 	l.Infow("app starting ..")
-	// TODO: add logic here
+	db, err := libapp.NewDBFromContext(c)
+	if err != nil {
+		l.Panicw("cannot init DB connection", "err", err)
+	}
+	_, err = dbutil.RunMigrationUp(db.DB, c.String(libapp.PostgresMigrationPath), c.String(libapp.PostgresDatabaseFlag))
+	if err != nil {
+		l.Panicw("cannot init DB", "err", err)
+	}
+	store := storage.New(db)
+	_ = store
 	return nil
 }
