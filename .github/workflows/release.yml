@@ -32,7 +32,7 @@ jobs:
     needs:
       - prepare
     env:
-      SERVICE: analytic-rebalancer
+      SERVICE: go-project-template
       VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
       BUILD_DATE: ${{ needs.prepare.outputs.build_date }}
     runs-on: self-hosted
