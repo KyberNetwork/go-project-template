@@ -19,7 +19,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-18.04]
     outputs:
       current_branch: ${{ steps.current_branch.outputs.value }}
       head_sha: ${{ steps.head_sha.outputs.value }}
@@ -69,7 +69,7 @@ jobs:
 
   lint:
     name: Run golangci-lint
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-18.04]
     needs:
       - prepare
     steps:
@@ -82,7 +82,7 @@ jobs:
           args: --config=.golangci.yml
 
   test:
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-18.04]
     needs:
       - prepare
     steps:
@@ -101,7 +101,7 @@ jobs:
         refs/heads/main
         refs/heads/develop
       ', github.ref)
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-18.04]
     needs:
       - prepare
     steps:
