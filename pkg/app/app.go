@@ -8,5 +8,6 @@ import (
 func NewApp() *cli.App {
 	app := cli.NewApp()
 	app.Flags = NewSentryFlags()
+
 	return app
 }

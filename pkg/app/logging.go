@@ -28,24 +28,27 @@ const (
 	cclogName = "cclog-name"
 )
 
-// NewSentryFlags returns flags to init sentry client
+// NewSentryFlags returns flags to init sentry client.
 func NewSentryFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:   sentryDSNFlag,
 			EnvVar: "SENTRY_DSN",
 			Usage:  "dsn for sentry client",
-		}, cli.StringFlag{
+		},
+		cli.StringFlag{
 			Name:   sentryLevelFlag,
 			EnvVar: "SENTRY_LEVEL",
 			Usage:  "log level report message to sentry (info, error, warn, fatal)",
 			Value:  defaultSentryLevel,
-		}, cli.StringFlag{
+		},
+		cli.StringFlag{
 			Name:   ccLogAddr,
 			Usage:  "cclog-address",
 			Value:  "",
 			EnvVar: "CCLOG_ADDR",
-		}, cli.StringFlag{
+		},
+		cli.StringFlag{
 			Name:   cclogName,
 			Usage:  "cclog-name",
 			Value:  "sample-cclog-name",
@@ -70,23 +73,28 @@ func NewFlusher(s syncer) func() {
 // NewLogger creates a new logger instance.
 // The type of logger instance will be different with different application running modes.
 func newLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel) {
-	var writers = []io.Writer{os.Stdout}
+	writers := []io.Writer{os.Stdout}
 	logAddr := c.GlobalString(ccLogAddr)
 	logName := c.GlobalString(cclogName)
+
 	if logAddr != "" && logName != "" {
 		ccw := client.NewAsyncLogClient(logName, logAddr, func(err error) {
-			fmt.Println("send log error", err)
+			fmt.Fprintln(os.Stdout, "send log error", err)
 		})
+
 		writers = append(writers, &UnescapeWriter{w: ccw})
 	}
-	w := io.MultiWriter(writers...)
 
+	w := io.MultiWriter(writers...)
 	atom := zap.NewAtomicLevelAt(zap.DebugLevel)
+
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = zapcore.RFC3339TimeEncoder
 	config.CallerKey = "caller"
+
 	encoder := zapcore.NewConsoleEncoder(config)
 	cc := zap.New(zapcore.NewCore(encoder, zapcore.AddSync(w), atom), zap.AddCaller())
+
 	return cc, atom
 }
 
@@ -95,8 +103,8 @@ func newLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel) {
 // This function should be use most of the time unless
 // the application requires extensive performance, in this case use NewLogger.
 func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
-
 	logger, atom := newLogger(c)
+
 	// init sentry if flag dsn exists
 	if len(c.String(sentryDSNFlag)) != 0 {
 		sentryClient, err := sentry.NewClient(
@@ -105,12 +113,13 @@ func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
 			},
 		)
 		if err != nil {
-			return nil, atom, nil, errors.Wrap(err, "failed to init sentry client")
+			return nil, atom, nil, fmt.Errorf("failed to init sentry client: %w", err)
 		}
 
 		cfg := zapsentry.Configuration{
 			DisableStacktrace: false,
 		}
+
 		switch c.String(sentryLevelFlag) {
 		case infoLevel:
 			cfg.Level = zapcore.InfoLevel
@@ -126,10 +135,11 @@ func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
 
 		core, err := zapsentry.NewCore(cfg, zapsentry.NewSentryClientFromClient(sentryClient))
 		if err != nil {
-			return nil, atom, nil, errors.Wrap(err, "failed to init zap sentry")
+			return nil, atom, nil, fmt.Errorf("failed to init zap sentry: %w", err)
 		}
 		// attach to logger core
 		logger = zapsentry.AttachCoreToLogger(core, logger)
 	}
+
 	return logger, atom, NewFlusher(logger), nil
 }
