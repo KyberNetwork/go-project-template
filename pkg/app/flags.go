@@ -11,7 +11,7 @@ const (
 	defaultTimeout = 5 * time.Second
 )
 
-// NewTimeoutFlag return client flag to config timeout
+// NewTimeoutFlag return client flag to config timeout.
 func NewTimeoutFlag() cli.Flag {
 	return cli.DurationFlag{
 		Name:   timeoutFlag,
@@ -21,7 +21,7 @@ func NewTimeoutFlag() cli.Flag {
 	}
 }
 
-// TimeoutFromContext return timeout from client configures
+// TimeoutFromContext return timeout from client configures.
 func TimeoutFromContext(c *cli.Context) time.Duration {
 	return c.Duration(timeoutFlag)
 }

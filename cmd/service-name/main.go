@@ -1,16 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
+	libapp "github.com/KyberNetwork/go-project-template/pkg/app"
 	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
 	"github.com/KyberNetwork/go-project-template/pkg/storage"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
-
-	libapp "github.com/KyberNetwork/go-project-template/pkg/app"
 )
 
 func main() {
@@ -27,21 +27,27 @@ func main() {
 func run(c *cli.Context) error {
 	logger, _, flush, err := libapp.NewLogger(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("new logger: %w", err)
 	}
+
 	defer flush()
+
 	zap.ReplaceGlobals(logger)
 	l := logger.Sugar()
 	l.Infow("app starting ..")
+
 	db, err := libapp.NewDBFromContext(c)
 	if err != nil {
 		l.Panicw("cannot init DB connection", "err", err)
 	}
+
 	_, err = dbutil.RunMigrationUp(db.DB, c.String(libapp.PostgresMigrationPath), c.String(libapp.PostgresDatabaseFlag))
 	if err != nil {
 		l.Panicw("cannot init DB", "err", err)
 	}
+
 	store := storage.New(db)
 	_ = store
+
 	return nil
 }
