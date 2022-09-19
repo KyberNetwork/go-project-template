@@ -11,7 +11,7 @@ type UnescapeWriter struct {
 }
 
 // Write ...
-func (u *UnescapeWriter) Write(p []byte) (n int, err error) {
+func (u UnescapeWriter) Write(p []byte) (int, error) {
 	var (
 		eq = []byte{'\\', '"'}
 		qq = []byte{'"'}

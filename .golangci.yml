@@ -11,3 +11,8 @@ linters:
     - nolintlint
     - exhaustivestruct
     - wrapcheck
+    - varnamelen
+    - golint
+    - paralleltest
+    - exhaustruct
+    - wsl
