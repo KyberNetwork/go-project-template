@@ -10,10 +10,12 @@ require (
 	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/golang-migrate/migrate/v4 v4.15.1
+	github.com/google/go-querystring v1.0.0
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/joho/godotenv v1.4.0
 	github.com/lib/pq v1.10.4
 	github.com/pkg/errors v0.9.1
+	github.com/shopspring/decimal v1.2.0
 	github.com/stretchr/testify v1.7.2
 	github.com/urfave/cli v1.22.5
 	go.uber.org/zap v1.20.0
