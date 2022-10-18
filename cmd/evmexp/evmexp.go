@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"math/big"
@@ -9,23 +10,31 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/go-project-template/pkg/contracts/erc20"
+	"github.com/KyberNetwork/go-project-template/pkg/contracts/iuniswapv2router"
 	"github.com/KyberNetwork/go-project-template/pkg/convert"
 	"github.com/KyberNetwork/go-project-template/pkg/onchain/kyberswap"
 	"github.com/KyberNetwork/go-project-template/pkg/onchain/simclient"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethclient/avmclient"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var (
-	rpcURL   = "http://localhost:8545"
+	rpcURL   = "http://192.168.11.4:8545"
 	myWallet = common.HexToAddress("0x0000000000000000000000000000000000111101")
 
 	kyberswapRouterAddress = common.HexToAddress("0x617Dee16B86534a5d792A4d7A62FB491B544111E") // 0x617Dee16B86534a5d792A4d7A62FB491B544111E
 
-	kncAddress  = common.HexToAddress("0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202")
-	usdtAddress = common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7")
+	kncAddress         = common.HexToAddress("0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202")
+	usdtAddress        = common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7")
+	usdcAddress        = common.HexToAddress("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+	wethAddress        = common.HexToAddress("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
+	univ2routerAddress = common.HexToAddress("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
 
 	overrideAccounts = simclient.OverrideAccounts{
 		myWallet: {
@@ -52,7 +61,7 @@ func TestSimcall() {
 	}}
 	kclient := kyberswap.NewClient(httpClient)
 	tokenIn := kncAddress
-	tokenOut := usdtAddress
+	tokenOut := wethAddress
 	amountIn := convert.FloatToWei(100, 18)
 
 	swapInfo, err := kclient.GetSwapInfo(context.Background(), "ethereum", kyberswap.GetSwapInfoInputParams{
@@ -67,7 +76,7 @@ func TestSimcall() {
 		Deadline:          "",
 		FeeAmount:         big.NewInt(0),
 		FeeReceiver:       &myWallet,
-		IsInBps:           false,
+		IsInBps:           true,
 	})
 	requireNoErr(err)
 	if len(swapInfo.EncodedSwapData) == 0 {
@@ -83,6 +92,10 @@ func TestSimcall() {
 
 	simClient, err := simclient.NewSimClient(rpcURL, httpClient, overrideAccounts)
 	requireNoErr(err)
+
+	block, err := simClient.BlockNumber(context.Background())
+	requireNoErr(err)
+	log.Println("current block", block)
 
 	inERC20Token, err := erc20.NewErc20(tokenIn, simClient)
 	requireNoErr(err)
@@ -106,12 +119,49 @@ func TestSimcall() {
 	}
 
 	var counter = uint64(0)
-	const numRoutine = 8
+	const numRoutine = 1
 
 	for i := 0; i < numRoutine; i++ {
 		go func() {
 			for {
 				_, err := simClient.CallContract(context.Background(), msg, nil)
+				requireNoErr(err)
+				atomic.AddUint64(&counter, 1)
+				break
+			}
+		}()
+	}
+	for range time.NewTicker(time.Second).C {
+		count := atomic.SwapUint64(&counter, 0)
+		log.Println("request rate", count)
+	}
+}
+
+func TestUniswapv2() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+	amountIn := convert.FloatToWei(5000, 6)
+	rc, err := rpc.DialHTTPWithClient(rpcURL, c)
+	requireNoErr(err)
+	ethClient := ethclient.NewClient(rc)
+	univ2Client, err := iuniswapv2router.NewIuniswapv2router(univ2routerAddress, ethClient)
+	requireNoErr(err)
+
+	block, err := ethClient.BlockNumber(context.Background())
+	requireNoErr(err)
+	log.Println("current block", block)
+
+	var counter = uint64(0)
+	const numRoutine = 12
+
+	for i := 0; i < numRoutine; i++ {
+		go func() {
+			for {
+				_, err := univ2Client.GetAmountsOut(&bind.CallOpts{}, amountIn, []common.Address{usdcAddress, wethAddress})
 				requireNoErr(err)
 				atomic.AddUint64(&counter, 1)
 			}
@@ -123,6 +173,46 @@ func TestSimcall() {
 	}
 }
 
+func TestUniswapv2Custom() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+	amountIn := convert.FloatToWei(5000, 6)
+
+	avmClient := avmclient.New(c, "http://192.168.11.4:8345")
+
+	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(iuniswapv2router.Iuniswapv2routerMetaData.ABI)))
+	data, err := uniabi.Pack("getAmountsOut", amountIn, []common.Address{usdcAddress, wethAddress})
+	requireNoErr(err)
+
+	var counter = uint64(0)
+	const numRoutine = 12
+
+	for i := 0; i < numRoutine; i++ {
+		go func() {
+			for {
+				_, err := avmClient.CustomCall(avmclient.CallMsg{
+					To:   univ2routerAddress,
+					Data: data,
+					Gas:  8000000,
+				})
+				requireNoErr(err)
+				atomic.AddUint64(&counter, 1)
+				break
+			}
+		}()
+	}
+	for range time.NewTicker(time.Second).C {
+		count := atomic.SwapUint64(&counter, 0)
+		log.Println("request rate", count)
+	}
+}
+
 func main() {
-	TestSimcall()
+	// TestSimcall() // 2022/10/12 07:20:25 current block 15730500
+	// TestUniswapv2()
+	TestUniswapv2Custom()
 }

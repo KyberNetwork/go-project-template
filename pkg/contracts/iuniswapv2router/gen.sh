@@ -1,0 +1,1 @@
+abigen --abi=iuniswapv2router.json --pkg=iuniswapv2router --out=iuniswapv2router.go
