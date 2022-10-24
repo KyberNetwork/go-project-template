@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -72,7 +71,7 @@ func (r roundTripperExt) RoundTrip(request *http.Request) (*http.Response, error
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(string(d2))
+		// fmt.Println(string(d2))
 		rt.ContentLength = int64(len(d2))
 		rt.Body = io.NopCloser(bytes.NewBuffer(d2))
 	}

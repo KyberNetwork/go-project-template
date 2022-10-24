@@ -11,6 +11,9 @@ import (
 
 	"github.com/KyberNetwork/go-project-template/pkg/contracts/erc20"
 	"github.com/KyberNetwork/go-project-template/pkg/contracts/iuniswapv2router"
+	"github.com/KyberNetwork/go-project-template/pkg/contracts/simutil"
+	"github.com/KyberNetwork/go-project-template/pkg/contracts/uniswapv3quoter"
+	"github.com/KyberNetwork/go-project-template/pkg/contracts/uniswapv3router"
 	"github.com/KyberNetwork/go-project-template/pkg/convert"
 	"github.com/KyberNetwork/go-project-template/pkg/onchain/kyberswap"
 	"github.com/KyberNetwork/go-project-template/pkg/onchain/simclient"
@@ -29,12 +32,14 @@ var (
 	myWallet = common.HexToAddress("0x0000000000000000000000000000000000111101")
 
 	kyberswapRouterAddress = common.HexToAddress("0x617Dee16B86534a5d792A4d7A62FB491B544111E") // 0x617Dee16B86534a5d792A4d7A62FB491B544111E
+	univ2routerAddress     = common.HexToAddress("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
+	uniswapV3Router        = common.HexToAddress("0xE592427A0AEce92De3Edee1F18E0157C05861564")
+	uniswapV3Quoter        = common.HexToAddress("0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6")
 
-	kncAddress         = common.HexToAddress("0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202")
-	usdtAddress        = common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7")
-	usdcAddress        = common.HexToAddress("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
-	wethAddress        = common.HexToAddress("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
-	univ2routerAddress = common.HexToAddress("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
+	kncAddress  = common.HexToAddress("0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202")
+	usdtAddress = common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7")
+	usdcAddress = common.HexToAddress("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+	wethAddress = common.HexToAddress("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
 
 	overrideAccounts = simclient.OverrideAccounts{
 		myWallet: {
@@ -47,6 +52,18 @@ var (
 			},
 		},
 	}
+
+	univ3Overrides = simclient.OverrideAccounts{
+		myWallet: {
+			Balance: "0x8ac7230489e80000",
+		},
+		usdcAddress: {
+			StateDiff: map[string]string{
+				"0x12ad0a2e9dbaa72fddc19f4ed13c3647f1ae39b16be9478c6a1eca1bf074de65": "0x00000000000000000000000000000000000000000000993635c9adc5dea00000",
+				"0x4e6c44dbae1976917ab2cb32265dcd82cd04024b0596a22ef872a96cffbeb913": "0x00000000000000000000000000000000000000000000993635c9adc5dea00000",
+			},
+		},
+	}
 )
 
 func requireNoErr(err error) {
@@ -55,7 +72,7 @@ func requireNoErr(err error) {
 	}
 }
 
-func TestSimcall() {
+func TestKyberswapAgg() {
 	httpClient := &http.Client{Transport: &http.Transport{
 		MaxConnsPerHost: 32,
 	}}
@@ -145,44 +162,9 @@ func TestUniswapv2() {
 		MaxIdleConnsPerHost: 64,
 	}}
 	amountIn := convert.FloatToWei(5000, 6)
-	rc, err := rpc.DialHTTPWithClient(rpcURL, c)
+	r, err := rpc.DialHTTPWithClient(rpcURL, c)
 	requireNoErr(err)
-	ethClient := ethclient.NewClient(rc)
-	univ2Client, err := iuniswapv2router.NewIuniswapv2router(univ2routerAddress, ethClient)
-	requireNoErr(err)
-
-	block, err := ethClient.BlockNumber(context.Background())
-	requireNoErr(err)
-	log.Println("current block", block)
-
-	var counter = uint64(0)
-	const numRoutine = 12
-
-	for i := 0; i < numRoutine; i++ {
-		go func() {
-			for {
-				_, err := univ2Client.GetAmountsOut(&bind.CallOpts{}, amountIn, []common.Address{usdcAddress, wethAddress})
-				requireNoErr(err)
-				atomic.AddUint64(&counter, 1)
-			}
-		}()
-	}
-	for range time.NewTicker(time.Second).C {
-		count := atomic.SwapUint64(&counter, 0)
-		log.Println("request rate", count)
-	}
-}
-
-func TestUniswapv2Custom() {
-
-	c := &http.Client{Transport: &http.Transport{
-		MaxConnsPerHost:     128,
-		MaxIdleConns:        64,
-		MaxIdleConnsPerHost: 64,
-	}}
-	amountIn := convert.FloatToWei(5000, 6)
-
-	avmClient := avmclient.New(c, "http://192.168.11.4:8345")
+	simClient := ethclient.NewClient(r) // simclient.NewSimClient(rpcURL, c, univ2Overrides)
 
 	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(iuniswapv2router.Iuniswapv2routerMetaData.ABI)))
 	data, err := uniabi.Pack("getAmountsOut", amountIn, []common.Address{usdcAddress, wethAddress})
@@ -194,14 +176,238 @@ func TestUniswapv2Custom() {
 	for i := 0; i < numRoutine; i++ {
 		go func() {
 			for {
-				_, err := avmClient.CustomCall(avmclient.CallMsg{
-					To:   univ2routerAddress,
+				_, err := simClient.CallContract(context.Background(), ethereum.CallMsg{
+					From: myWallet,
+					To:   &univ2routerAddress,
 					Data: data,
 					Gas:  8000000,
+				}, nil)
+				requireNoErr(err)
+				atomic.AddUint64(&counter, 1)
+			}
+		}()
+	}
+	for range time.NewTicker(time.Second).C {
+		count := atomic.SwapUint64(&counter, 0)
+		log.Println("request rate", count)
+	}
+}
+
+func TestFakeAccount() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+	fakeSimUtilAddress := common.HexToAddress("0x11111111111111111111111111111111111111aa")
+	fakeUserAddress := common.HexToAddress("0x1111111111111111111111111111111111111100")
+
+	avmClient := avmclient.New(c, "http://192.168.11.4:8345")
+
+	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(simutil.SimUtilABI)))
+	data, err := uniabi.Pack("getBalances",
+		[]common.Address{fakeUserAddress},
+		[]common.Address{usdcAddress, wethAddress})
+	requireNoErr(err)
+
+	rdata, err := avmClient.CustomCall(avmclient.CallMsg{
+		From: fakeUserAddress,
+		To:   fakeSimUtilAddress,
+		Data: data,
+		Overrides: []avmclient.Override{
+			{
+				Address: fakeSimUtilAddress,
+				Code:    hexutil.MustDecode("0x608060405234801561001057600080fd5b506004361061002b5760003560e01c8063ef5bfc3714610030575b600080fd5b6100fc6004803603604081101561004657600080fd5b810190808035906020019064010000000081111561006357600080fd5b82018360208201111561007557600080fd5b8035906020019184602083028401116401000000008311171561009757600080fd5b9091929391929390803590602001906401000000008111156100b857600080fd5b8201836020820111156100ca57600080fd5b803590602001918460208302840111640100000000831117156100ec57600080fd5b9091929391929390505050610153565b6040518080602001828103825283818151815260200191508051906020019060200280838360005b8381101561013f578082015181840152602081019050610124565b505050509050019250505060405180910390f35b60608083839050868690500267ffffffffffffffff8111801561017557600080fd5b506040519080825280602002602001820160405280156101a45781602001602082028036833780820191505090505b50905060005b868690508110156103c45760005b858590508110156103b65773eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee73ffffffffffffffffffffffffffffffffffffffff168686838181106101fa57fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1614156102975787878381811061023f57fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16318382888890508502018151811061028657fe5b6020026020010181815250506103a9565b8585828181106102a357fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166370a082318989858181106102e757fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff166040518263ffffffff1660e01b8152600401808273ffffffffffffffffffffffffffffffffffffffff16815260200191505060206040518083038186803b15801561034e57600080fd5b505afa158015610362573d6000803e3d6000fd5b505050506040513d602081101561037857600080fd5b81019080805190602001909291905050508382888890508502018151811061039c57fe5b6020026020010181815250505b80806001019150506101b8565b5080806001019150506101aa565b508091505094935050505056fea26469706673582212200b8738e9ce84a5af761886e464d14ce62b0d8bce0316bc15a43ba74267a846ea64736f6c634300060c0033"),
+			},
+		},
+	})
+
+	requireNoErr(err)
+	var out []*big.Int
+	err = uniabi.UnpackIntoInterface(&out, "getBalances", rdata)
+	requireNoErr(err)
+	log.Println(out)
+}
+
+func TestUniswapv2CustomRate() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+	amountIn := convert.FloatToWei(5000, 6)
+	avmClient := avmclient.New(c, "http://192.168.11.4:8345")
+	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(iuniswapv2router.Iuniswapv2routerMetaData.ABI)))
+	// data, err := uniabi.Pack("swapExactETHForTokens", big.NewInt(0),
+	//	[]common.Address{wethAddress, usdcAddress}, myWallet, big.NewInt(time.Now().Unix()+600))
+	data, err := uniabi.Pack("getAmountsOut", amountIn, []common.Address{usdcAddress, wethAddress})
+	requireNoErr(err)
+
+	var counter = uint64(0)
+	const numRoutine = 12
+
+	for i := 0; i < numRoutine; i++ {
+		go func() {
+			for {
+				_, err := avmClient.CustomCall(avmclient.CallMsg{
+					From: myWallet,
+					To:   univ2routerAddress,
+					Data: data,
 				})
 				requireNoErr(err)
 				atomic.AddUint64(&counter, 1)
+			}
+		}()
+	}
+	for range time.NewTicker(time.Second).C {
+		count := atomic.SwapUint64(&counter, 0)
+		log.Println("request rate", count)
+	}
+}
+
+func TestUniswapv3() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+	amountIn := convert.FloatToWei(5000, 6)
+
+	simClient, err := simclient.NewSimClient(rpcURL, c, univ3Overrides)
+	requireNoErr(err)
+
+	var counter = uint64(0)
+	const numRoutine = 1
+	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(uniswapv3router.Uniswapv3MetaData.ABI)))
+	data, err := uniabi.Pack("exactInputSingle", uniswapv3router.ISwapRouterExactInputSingleParams{
+		TokenIn:           usdcAddress,
+		TokenOut:          wethAddress,
+		Fee:               big.NewInt(3000),
+		Recipient:         myWallet,
+		Deadline:          big.NewInt(time.Now().Unix() + 600),
+		AmountIn:          amountIn,
+		AmountOutMinimum:  big.NewInt(0),
+		SqrtPriceLimitX96: big.NewInt(0),
+	})
+	requireNoErr(err)
+	for i := 0; i < numRoutine; i++ {
+		go func() {
+			for {
+				buff, err := simClient.CallContract(context.Background(), ethereum.CallMsg{
+					From: myWallet,
+					To:   &uniswapV3Router,
+					Gas:  8000000,
+					Data: data,
+				}, nil)
+				requireNoErr(err)
+				atomic.AddUint64(&counter, 1)
+
+				var res *big.Int
+				uniabi.UnpackIntoInterface(&res, "exactInputSingle", buff)
+				log.Println(res)
 				break
+			}
+		}()
+	}
+	for range time.NewTicker(time.Second).C {
+		count := atomic.SwapUint64(&counter, 0)
+		log.Println("request rate", count)
+	}
+}
+
+func TestUniswapv3Custom() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+
+	amountIn := convert.FloatToWei(5000, 6)
+
+	avmClient := avmclient.New(c, "http://192.168.11.4:8345")
+
+	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(uniswapv3router.Uniswapv3MetaData.ABI)))
+	data, err := uniabi.Pack("exactInputSingle", uniswapv3router.ISwapRouterExactInputSingleParams{
+		TokenIn:           usdcAddress,
+		TokenOut:          wethAddress,
+		Fee:               big.NewInt(3000),
+		Recipient:         myWallet,
+		Deadline:          big.NewInt(time.Now().Unix() + 600),
+		AmountIn:          amountIn,
+		AmountOutMinimum:  big.NewInt(0),
+		SqrtPriceLimitX96: big.NewInt(0),
+	})
+	requireNoErr(err)
+
+	var counter = uint64(0)
+	const numRoutine = 12
+	overrides := []avmclient.Override{
+		{
+			Address: myWallet,
+			Balance: convert.FloatToWei(1, 18),
+		},
+		{
+			Address: usdcAddress,
+			StateDiff: map[common.Hash]common.Hash{
+				common.HexToHash("0x12ad0a2e9dbaa72fddc19f4ed13c3647f1ae39b16be9478c6a1eca1bf074de65"): common.HexToHash("0x00000000000000000000000000000000000000000000993635c9adc5dea00000"),
+				common.HexToHash("0x4e6c44dbae1976917ab2cb32265dcd82cd04024b0596a22ef872a96cffbeb913"): common.HexToHash("0x00000000000000000000000000000000000000000000993635c9adc5dea00000"),
+			},
+		},
+	}
+	for i := 0; i < numRoutine; i++ {
+		go func() {
+			for {
+				_, err := avmClient.CustomCall(avmclient.CallMsg{
+					From:      myWallet,
+					To:        uniswapV3Router,
+					Gas:       avmclient.Uint64Ptr(8000000),
+					Data:      data,
+					Overrides: overrides,
+				})
+				requireNoErr(err)
+				atomic.AddUint64(&counter, 1)
+			}
+		}()
+	}
+	for range time.NewTicker(time.Second).C {
+		count := atomic.SwapUint64(&counter, 0)
+		log.Println("request rate", count)
+	}
+}
+
+func TestUniswapv3QuoterCustom() {
+
+	c := &http.Client{Transport: &http.Transport{
+		MaxConnsPerHost:     128,
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 64,
+	}}
+
+	amountIn := convert.FloatToWei(500000, 6)
+	avmClient := avmclient.New(c, "http://192.168.11.4:8345")
+
+	uniabi, _ := abi.JSON(bytes.NewBuffer([]byte(uniswapv3quoter.Uniswapv3quoterMetaData.ABI)))
+	data, err := uniabi.Pack("quoteExactInputSingle", usdcAddress, wethAddress, big.NewInt(3000), amountIn, big.NewInt(0))
+	requireNoErr(err)
+
+	var counter = uint64(0)
+	const numRoutine = 1
+	for i := 0; i < numRoutine; i++ {
+		go func() {
+			for {
+				_, err := avmClient.CustomCall(avmclient.CallMsg{
+					From: myWallet,
+					To:   uniswapV3Quoter,
+					Gas:  avmclient.Uint64Ptr(8000000),
+					Data: data,
+					// Overrides: overrides,
+				})
+				requireNoErr(err)
+				atomic.AddUint64(&counter, 1)
 			}
 		}()
 	}
@@ -214,5 +420,11 @@ func TestUniswapv2Custom() {
 func main() {
 	// TestSimcall() // 2022/10/12 07:20:25 current block 15730500
 	// TestUniswapv2()
-	TestUniswapv2Custom()
+	// TestUniswapv2Custom()
+	// TestFakeAccount()
+	// TestSimUtilcall()
+	// TestUniswapv3Custom()
+	// TestUniswapv3()
+	TestUniswapv3QuoterCustom()
+	// TestUniswapv2CustomRate()
 }
