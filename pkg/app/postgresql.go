@@ -3,66 +3,60 @@ package app
 import (
 	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" //nolint sql driver name: "postgres"
+	_ "github.com/lib/pq" // nolint sql driver name: "postgres"
 	"github.com/urfave/cli"
 )
 
-const (
-	PostgresHostFlag    = "postgres-host"
-	DefaultPostgresHost = "127.0.0.1"
-
-	PostgresPortFlag    = "postgres-port"
-	DefaultPostgresPort = 5432
-
-	PostgresUserFlag    = "postgres-user"
-	DefaultPostgresUser = "go_project_template"
-
-	PostgresPasswordFlag    = "postgres-password"
-	DefaultPostgresPassword = "go_project_template"
-
-	PostgresDatabaseFlag = "postgres-database"
-
-	PostgresMigrationPath = "migration-path"
+var (
+	PostgresHost = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "postgres-host",
+		Usage:  "PostgresSQL host to connect",
+		EnvVar: "POSTGRES_HOST",
+		Value:  "127.0.0.1",
+	}
+	PostgresPort = cli.IntFlag{ // nolint: gochecknoglobals
+		Name:   "postgres-port",
+		Usage:  "PostgresSQL port to connect",
+		EnvVar: "POSTGRES_PORT",
+		Value:  5432, // nolint: gomnd
+	}
+	PostgresUser = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "postgres-user",
+		Usage:  "PostgresSQL user to connect",
+		EnvVar: "POSTGRES_USER",
+		Value:  "go_project_template",
+	}
+	PostgresPassword = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "postgres-password",
+		Usage:  "PostgresSQL password to connect",
+		EnvVar: "POSTGRES_PASSWORD",
+		Value:  "go_project_template",
+	}
+	PostgresDatabase = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "postgres-database",
+		Usage:  "Postgres database to connect",
+		EnvVar: "POSTGRES_DATABASE",
+		Value:  "go_project_template",
+	}
+	PostgresMigrationPath = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "migration-path",
+		Value:  "migrations",
+		EnvVar: "MIGRATION_PATH",
+	}
 )
 
 // PostgresSQLFlags creates new cli flags for PostgreSQL client.
 func PostgresSQLFlags(defaultDB string) []cli.Flag {
+	db := PostgresDatabase
+	db.Value = defaultDB
+
 	return []cli.Flag{
-		cli.StringFlag{
-			Name:   PostgresHostFlag,
-			Usage:  "PostgresSQL host to connect",
-			EnvVar: "POSTGRES_HOST",
-			Value:  DefaultPostgresHost,
-		},
-		cli.IntFlag{
-			Name:   PostgresPortFlag,
-			Usage:  "PostgresSQL port to connect",
-			EnvVar: "POSTGRES_PORT",
-			Value:  DefaultPostgresPort,
-		},
-		cli.StringFlag{
-			Name:   PostgresUserFlag,
-			Usage:  "PostgresSQL user to connect",
-			EnvVar: "POSTGRES_USER",
-			Value:  DefaultPostgresUser,
-		},
-		cli.StringFlag{
-			Name:   PostgresPasswordFlag,
-			Usage:  "PostgresSQL password to connect",
-			EnvVar: "POSTGRES_PASSWORD",
-			Value:  DefaultPostgresPassword,
-		},
-		cli.StringFlag{
-			Name:   PostgresDatabaseFlag,
-			Usage:  "Postgres database to connect",
-			EnvVar: "POSTGRES_DATABASE",
-			Value:  defaultDB,
-		},
-		cli.StringFlag{
-			Name:   PostgresMigrationPath,
-			Value:  "migrations",
-			EnvVar: "MIGRATION_PATH",
-		},
+		PostgresHost,
+		PostgresPort,
+		PostgresUser,
+		PostgresPassword,
+		db,
+		PostgresMigrationPath,
 	}
 }
 
@@ -70,12 +64,12 @@ func PostgresSQLFlags(defaultDB string) []cli.Flag {
 func NewDBFromContext(c *cli.Context) (*sqlx.DB, error) {
 	const driverName = "postgres"
 
-	connStr := dbutil.FormatDSN(map[string]string{
-		"host":     c.String(PostgresHostFlag),
-		"port":     c.String(PostgresPortFlag),
-		"user":     c.String(PostgresUserFlag),
-		"password": c.String(PostgresPasswordFlag),
-		"dbname":   c.String(PostgresDatabaseFlag),
+	connStr := dbutil.FormatDSN(map[string]interface{}{
+		"host":     c.String(PostgresHost.Name),
+		"port":     c.Int(PostgresPort.Name),
+		"user":     c.String(PostgresUser.Name),
+		"password": c.String(PostgresPassword.String()),
+		"dbname":   c.String(PostgresDatabase.Name),
 		"sslmode":  "disable",
 	})
 

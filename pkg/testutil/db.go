@@ -2,13 +2,11 @@ package testutil
 
 import (
 	"fmt"
-	"strconv"
 
-	libapp "github.com/KyberNetwork/go-project-template/pkg/app"
 	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
-	_ "github.com/golang-migrate/migrate/v4/source/file" //nolint go migrate
+	_ "github.com/golang-migrate/migrate/v4/source/file" // nolint go migrate
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" //nolint sql driver name: "postgres"
+	_ "github.com/lib/pq" // nolint sql driver name: "postgres"
 )
 
 // MustNewDevelopmentDB creates a new development DB.
@@ -17,11 +15,16 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 	const dbNameLen = 8
 
 	dbName := RandomString(dbNameLen)
-	dsn := dbutil.FormatDSN(map[string]string{
-		"host":     libapp.DefaultPostgresHost,
-		"port":     strconv.Itoa(libapp.DefaultPostgresPort),
-		"user":     libapp.DefaultPostgresUser,
-		"password": libapp.DefaultPostgresPassword,
+	defaultHost := "127.0.0.1"
+	defaultPort := 5432
+	defaultUser := "test"
+	defaultPassword := "test"
+
+	dsn := dbutil.FormatDSN(map[string]interface{}{
+		"host":     defaultHost,
+		"port":     defaultPort,
+		"user":     defaultUser,
+		"password": defaultPassword,
 		"sslmode":  "disable",
 	})
 
@@ -36,11 +39,11 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 		panic(err)
 	}
 
-	dsnWithDB := dbutil.FormatDSN(map[string]string{
-		"host":     libapp.DefaultPostgresHost,
-		"port":     strconv.Itoa(libapp.DefaultPostgresPort),
-		"user":     libapp.DefaultPostgresUser,
-		"password": libapp.DefaultPostgresPassword,
+	dsnWithDB := dbutil.FormatDSN(map[string]interface{}{
+		"host":     defaultHost,
+		"port":     defaultPort,
+		"user":     defaultUser,
+		"password": defaultPassword,
 		"sslmode":  "disable",
 		"dbname":   dbName,
 	})

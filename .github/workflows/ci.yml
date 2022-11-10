@@ -19,7 +19,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: [ubuntu-18.04]
+    runs-on: [ubuntu-22.04]
     outputs:
       current_branch: ${{ steps.current_branch.outputs.value }}
       head_sha: ${{ steps.head_sha.outputs.value }}
@@ -66,23 +66,47 @@ jobs:
           branch_tag="$(echo "$CURRENT_BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/-$//g')"
           echo "::set-output name=image_tag::$branch_tag-$short_sha"
           echo "::set-output name=branch_tag::$branch_tag-$short_sha"
-
   lint:
     name: Run golangci-lint
-    runs-on: [ubuntu-18.04]
+    runs-on: [ubuntu-22.04]
     needs:
       - prepare
     steps:
+      - name: Add git config for Go private module
+        run: git config --global url."https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com/".insteadOf https://github.com/
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.19.x"
+      - name: download go module
+        shell: bash
+        run: go mod download
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.46.2
           args: --config=.golangci.yml
+          skip-pkg-cache: true
+          skip-build-cache: true
 
   test:
-    runs-on: [ubuntu-18.04]
+    runs-on: [ubuntu-22.04]
+#    services:
+#      postgres:
+#        image: postgres:14-alpine
+#        env:
+#          POSTGRES_PASSWORD: go-project-template
+#          POSTGRES_USER: go-project-template
+#          POSTGRES_DB: go-project-template
+#        options: >-
+#          --health-cmd pg_isready
+#          --health-interval 10s
+#          --health-timeout 5s
+#          --health-retries 5
+#        ports:
+#          - 5432:5432
     needs:
       - prepare
     steps:
@@ -91,25 +115,53 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: "1.17.x"
+          go-version: "1.19.x"
       - name: Run test
         run: go test -race -v ./...
 
-  build:
-    if: 
-      contains('
-        refs/heads/main
-        refs/heads/develop
-      ', github.ref)
-    runs-on: [ubuntu-18.04]
-    needs:
-      - prepare
+  docker:
+    name: Docker
+    runs-on: [ ubuntu-22.04 ]
+    needs: [ prepare, lint, test ]
+    env:
+      SERVICE: go-project-template
+      BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
+      COMMIT_TAG: ${{ needs.prepare.outputs.commit_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Prepare images
+        id: images
+        shell: bash
+        env:
+          COMMIT_TAG: ${{ needs.prepare.outputs.commit_tag }}
+          VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
+          BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
+        run: |
+          ls -l
+#   ===== for docker.io =====
+#          DOCKER_REPO="kybernetwork/$SERVICE"
+#
+#          COMBINE_TAG="$DOCKER_REPO:$BRANCH_TAG-$COMMIT_TAG"
+#          echo "::set-output name=combine::$COMBINE_TAG"
+#
+#          IMAGE_WITH_BRANCH_TAG="$DOCKER_REPO:$BRANCH_TAG"
+#          echo "::set-output name=branch::$IMAGE_WITH_BRANCH_TAG"
+#
+#          [[ -n "$VERSION_TAG" ]] || exit 0
+#          IMAGE_WITH_VERSION_TAG="$DOCKER_REPO:$VERSION_TAG"
+#          echo "::set-output name=version::$IMAGE_WITH_VERSION_TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@master
+        if: github.event_name != 'pull_request'
+#   ===== for docker.io =====
+#      - name: Docker login
+#        uses: docker/login-action@v1
+#        with:
+#          username: ${{ secrets.DOCKER_USERNAME }}
+#          password: ${{ secrets.DOCKER_TOKEN }}
+#        if: github.event_name != 'pull_request'
 
       - name: Gcloud Auth
         uses: google-github-actions/auth@v0
@@ -127,24 +179,28 @@ jobs:
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-${{ env.SERVICE }}-buildx
+        if: github.event_name != 'pull_request'
 
-      - name: Docker build and push
+      - name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           labels: |
-            kyber.network.schema-version=1.0
-            kyber.network.vcs-ref=${{ github.sha }}
-            kyber.network.version=${{ needs.prepare.outputs.image_tag }}
-            kyber.network.name=${{ env.SERVICE }}
+            commit=${{ github.sha }}
           tags: |
             ${{ needs.prepare.outputs.image_name }}:${{ needs.prepare.outputs.image_tag }}
             ${{ needs.prepare.outputs.image_name }}:${{ needs.prepare.outputs.branch_tag }}
+#            ===== for docker.io =====
+#            ${{ steps.images.outputs.branch }}
+#            ${{ steps.images.outputs.combine }}
+#            ${{ steps.images.outputs.version }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
+        if: github.event_name != 'pull_request'
 
-      - name: Move Docker cache
+      - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+        if: github.event_name != 'pull_request'

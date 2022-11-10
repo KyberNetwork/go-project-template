@@ -41,7 +41,8 @@ func run(c *cli.Context) error {
 		l.Panicw("cannot init DB connection", "err", err)
 	}
 
-	_, err = dbutil.RunMigrationUp(db.DB, c.String(libapp.PostgresMigrationPath), c.String(libapp.PostgresDatabaseFlag))
+	_, err = dbutil.RunMigrationUp(db.DB, c.String(libapp.PostgresMigrationPath.Name),
+		c.String(libapp.PostgresDatabase.Name))
 	if err != nil {
 		l.Panicw("cannot init DB", "err", err)
 	}

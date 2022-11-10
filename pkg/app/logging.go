@@ -19,41 +19,41 @@ const (
 	warnLevel  = "warn"
 	errorLevel = "error"
 	fatalLevel = "fatal"
-
-	sentryDSNFlag      = "sentry-dsn"
-	sentryLevelFlag    = "sentry-lv"
-	defaultSentryLevel = errorLevel
-
-	ccLogAddr = "cclog-addr"
-	cclogName = "cclog-name"
 )
 
-// NewSentryFlags returns flags to init sentry client.
-func NewSentryFlags() []cli.Flag {
+var (
+	// SentryDSN ...
+	SentryDSN = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "sentry-dsn",
+		EnvVar: "SENTRY_DSN",
+		Usage:  "dsn for sentry client",
+	}
+	SentryLevel = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "sentry-lv",
+		EnvVar: "SENTRY_LEVEL",
+		Usage:  "log level report message to sentry (info, error, warn, fatal)",
+		Value:  "error",
+	}
+	CCLogAddress = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "cclog-addr",
+		Usage:  "cclog-address",
+		Value:  "",
+		EnvVar: "CCLOG_ADDR",
+	}
+	CCLogName = cli.StringFlag{ // nolint: gochecknoglobals
+		Name:   "cclog-name",
+		Usage:  "cclog-name",
+		Value:  "sample-cclog-name",
+		EnvVar: "CCLOG_NAME",
+	}
+)
+
+func SentryFlags() []cli.Flag {
 	return []cli.Flag{
-		cli.StringFlag{
-			Name:   sentryDSNFlag,
-			EnvVar: "SENTRY_DSN",
-			Usage:  "dsn for sentry client",
-		},
-		cli.StringFlag{
-			Name:   sentryLevelFlag,
-			EnvVar: "SENTRY_LEVEL",
-			Usage:  "log level report message to sentry (info, error, warn, fatal)",
-			Value:  defaultSentryLevel,
-		},
-		cli.StringFlag{
-			Name:   ccLogAddr,
-			Usage:  "cclog-address",
-			Value:  "",
-			EnvVar: "CCLOG_ADDR",
-		},
-		cli.StringFlag{
-			Name:   cclogName,
-			Usage:  "cclog-name",
-			Value:  "sample-cclog-name",
-			EnvVar: "CCLOG_NAME",
-		},
+		SentryDSN,
+		SentryLevel,
+		CCLogAddress,
+		CCLogName,
 	}
 }
 
@@ -74,8 +74,8 @@ func NewFlusher(s syncer) func() {
 // The type of logger instance will be different with different application running modes.
 func newLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel) {
 	writers := []io.Writer{os.Stdout}
-	logAddr := c.GlobalString(ccLogAddr)
-	logName := c.GlobalString(cclogName)
+	logAddr := c.String(CCLogAddress.Name)
+	logName := c.String(CCLogName.Name)
 
 	if logAddr != "" && logName != "" {
 		ccw := client.NewAsyncLogClient(logName, logAddr, func(err error) {
@@ -106,10 +106,10 @@ func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
 	logger, atom := newLogger(c)
 
 	// init sentry if flag dsn exists
-	if len(c.String(sentryDSNFlag)) != 0 {
+	if len(c.String(SentryDSN.Name)) != 0 {
 		sentryClient, err := sentry.NewClient(
 			sentry.ClientOptions{
-				Dsn: c.String(sentryDSNFlag),
+				Dsn: c.String(SentryDSN.Name),
 			},
 		)
 		if err != nil {
@@ -120,7 +120,7 @@ func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
 			DisableStacktrace: false,
 		}
 
-		switch c.String(sentryLevelFlag) {
+		switch c.String(SentryLevel.Name) {
 		case infoLevel:
 			cfg.Level = zapcore.InfoLevel
 		case warnLevel:
@@ -130,7 +130,7 @@ func NewLogger(c *cli.Context) (*zap.Logger, zap.AtomicLevel, func(), error) {
 		case fatalLevel:
 			cfg.Level = zapcore.FatalLevel
 		default:
-			return nil, atom, nil, errors.Errorf("invalid log level %v", c.String(sentryLevelFlag))
+			return nil, atom, nil, errors.Errorf("invalid log level %v", c.String(SentryLevel.Name))
 		}
 
 		core, err := zapsentry.NewCore(cfg, zapsentry.NewSentryClientFromClient(sentryClient))
