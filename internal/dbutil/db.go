@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	migratepostgres "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file" //nolint go migrate
+	_ "github.com/golang-migrate/migrate/v4/source/file" // nolint go migrate
 	"github.com/jmoiron/sqlx"
 )
 
@@ -25,12 +25,12 @@ func NewDB(dsn string) (*sqlx.DB, error) {
 }
 
 // FormatDSN ..
-func FormatDSN(props map[string]string) string {
+func FormatDSN(props map[string]interface{}) string {
 	var s strings.Builder
 	for k, v := range props {
 		s.WriteString(k)
 		s.WriteString("=")
-		s.WriteString(v)
+		s.WriteString(fmt.Sprintf("%+v", v))
 		s.WriteString(" ")
 	}
 

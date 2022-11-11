@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KyberNetwork/go-project-template/pkg/onchain/multiutil"
-	"github.com/KyberNetwork/go-project-template/pkg/onchain/simclient"
+	"github.com/KyberNetwork/go-project-template/internal/onchain/multiutil"
+	"github.com/KyberNetwork/go-project-template/internal/onchain/simclient"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/joho/godotenv"
