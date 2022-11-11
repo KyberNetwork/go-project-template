@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
-	libapp "github.com/KyberNetwork/go-project-template/pkg/app"
-	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
-	"github.com/KyberNetwork/go-project-template/pkg/storage"
+	libapp "github.com/KyberNetwork/go-project-template/internal/app"
+	"github.com/KyberNetwork/go-project-template/internal/dbutil"
+	"github.com/KyberNetwork/go-project-template/internal/storage"
+	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
@@ -36,13 +37,7 @@ func run(c *cli.Context) error {
 	l := logger.Sugar()
 	l.Infow("app starting ..")
 
-	db, err := libapp.NewDBFromContext(c)
-	if err != nil {
-		l.Panicw("cannot init DB connection", "err", err)
-	}
-
-	_, err = dbutil.RunMigrationUp(db.DB, c.String(libapp.PostgresMigrationPath.Name),
-		c.String(libapp.PostgresDatabase.Name))
+	db, err := initDB(c)
 	if err != nil {
 		l.Panicw("cannot init DB", "err", err)
 	}
@@ -51,4 +46,25 @@ func run(c *cli.Context) error {
 	_ = store
 
 	return nil
+}
+
+func initDB(c *cli.Context) (*sqlx.DB, error) {
+	db, err := libapp.NewDB(map[string]interface{}{
+		"host":     c.String(libapp.PostgresHost.Name),
+		"port":     c.Int(libapp.PostgresPort.Name),
+		"user":     c.String(libapp.PostgresUser.Name),
+		"password": c.String(libapp.PostgresPassword.String()),
+		"dbname":   c.String(libapp.PostgresDatabase.Name),
+		"sslmode":  "disable",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = dbutil.RunMigrationUp(db.DB, c.String(libapp.PostgresMigrationPath.Name),
+		c.String(libapp.PostgresDatabase.Name))
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }

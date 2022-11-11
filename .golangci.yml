@@ -16,4 +16,4 @@ linters:
     - paralleltest
     - exhaustruct
     - wsl
-    - funlen
+    - nlreturn

@@ -3,7 +3,7 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
+	"github.com/KyberNetwork/go-project-template/internal/dbutil"
 	_ "github.com/golang-migrate/migrate/v4/source/file" // nolint go migrate
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // nolint sql driver name: "postgres"
@@ -32,9 +32,7 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 	if err != nil {
 		panic(err)
 	}
-
 	ddlDB.MustExec(fmt.Sprintf(`CREATE DATABASE "%s"`, dbName))
-
 	if err := ddlDB.Close(); err != nil {
 		panic(err)
 	}
@@ -62,16 +60,13 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 		if _, err := m.Close(); err != nil {
 			return err
 		}
-
 		ddlDB, err := dbutil.NewDB(dsn)
 		if err != nil {
 			return err
 		}
-
 		if _, err = ddlDB.Exec(fmt.Sprintf(`DROP DATABASE "%s"`, dbName)); err != nil {
 			return err
 		}
-
 		return ddlDB.Close()
 	}
 }

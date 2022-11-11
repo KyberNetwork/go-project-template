@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/KyberNetwork/go-project-template/pkg/dbutil"
+	"github.com/KyberNetwork/go-project-template/internal/dbutil"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // nolint sql driver name: "postgres"
 	"github.com/urfave/cli"
@@ -60,18 +60,10 @@ func PostgresSQLFlags(defaultDB string) []cli.Flag {
 	}
 }
 
-// NewDBFromContext creates a DB instance from cli flags configuration.
-func NewDBFromContext(c *cli.Context) (*sqlx.DB, error) {
+// NewDB creates a DB instance from cli flags configuration.
+func NewDB(specs map[string]interface{}) (*sqlx.DB, error) {
 	const driverName = "postgres"
-
-	connStr := dbutil.FormatDSN(map[string]interface{}{
-		"host":     c.String(PostgresHost.Name),
-		"port":     c.Int(PostgresPort.Name),
-		"user":     c.String(PostgresUser.Name),
-		"password": c.String(PostgresPassword.String()),
-		"dbname":   c.String(PostgresDatabase.Name),
-		"sslmode":  "disable",
-	})
+	connStr := dbutil.FormatDSN(specs)
 
 	return sqlx.Connect(driverName, connStr)
 }
