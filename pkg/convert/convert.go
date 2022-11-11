@@ -42,11 +42,9 @@ func FloatToWei(amount float64, decimals int64) *big.Int {
 
 // IntToWei ...
 func IntToWei(amount int64, decimals int64) *big.Int {
-
 	weiFloat := big.NewInt(amount)
 	decimalsBig := Exp10(decimals)
 	amountBig := new(big.Int).Mul(weiFloat, decimalsBig)
-
 	return amountBig
 }
 
