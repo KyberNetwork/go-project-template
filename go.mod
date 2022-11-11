@@ -14,6 +14,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/lib/pq v1.10.4
 	github.com/pkg/errors v0.9.1
+	github.com/shopspring/decimal v1.2.0
 	github.com/stretchr/testify v1.7.2
 	github.com/urfave/cli v1.22.5
 	go.uber.org/zap v1.20.0
