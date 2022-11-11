@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	precisionDecimals = 18
-	expBase           = 10
+	expBase = 10
 )
 
 // Exp10 ...
