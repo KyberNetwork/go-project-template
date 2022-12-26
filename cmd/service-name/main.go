@@ -53,7 +53,7 @@ func initDB(c *cli.Context) (*sqlx.DB, error) {
 		"host":     c.String(libapp.PostgresHost.Name),
 		"port":     c.Int(libapp.PostgresPort.Name),
 		"user":     c.String(libapp.PostgresUser.Name),
-		"password": c.String(libapp.PostgresPassword.String()),
+		"password": c.String(libapp.PostgresPassword.Name),
 		"dbname":   c.String(libapp.PostgresDatabase.Name),
 		"sslmode":  "disable",
 	})
