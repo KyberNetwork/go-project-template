@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // NewApp creates a new cli App instance with common flags pre-loaded.
