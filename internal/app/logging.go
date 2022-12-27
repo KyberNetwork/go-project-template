@@ -9,7 +9,7 @@ import (
 	"github.com/TheZeroSlave/zapsentry"
 	"github.com/getsentry/sentry-go"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -24,36 +24,36 @@ const (
 var (
 	// SentryDSN ...
 	SentryDSN = cli.StringFlag{ // nolint: gochecknoglobals
-		Name:   "sentry-dsn",
-		EnvVar: "SENTRY_DSN",
-		Usage:  "dsn for sentry client",
+		Name:    "sentry-dsn",
+		EnvVars: []string{"SENTRY_DSN"},
+		Usage:   "dsn for sentry client",
 	}
 	SentryLevel = cli.StringFlag{ // nolint: gochecknoglobals
-		Name:   "sentry-lv",
-		EnvVar: "SENTRY_LEVEL",
-		Usage:  "log level report message to sentry (info, error, warn, fatal)",
-		Value:  "error",
+		Name:    "sentry-lv",
+		EnvVars: []string{"SENTRY_LEVEL"},
+		Usage:   "log level report message to sentry (info, error, warn, fatal)",
+		Value:   "error",
 	}
 	CCLogAddress = cli.StringFlag{ // nolint: gochecknoglobals
-		Name:   "cclog-addr",
-		Usage:  "cclog-address",
-		Value:  "",
-		EnvVar: "CCLOG_ADDR",
+		Name:    "cclog-addr",
+		Usage:   "cclog-address",
+		Value:   "",
+		EnvVars: []string{"CCLOG_ADDR"},
 	}
 	CCLogName = cli.StringFlag{ // nolint: gochecknoglobals
-		Name:   "cclog-name",
-		Usage:  "cclog-name",
-		Value:  "sample-cclog-name",
-		EnvVar: "CCLOG_NAME",
+		Name:    "cclog-name",
+		Usage:   "cclog-name",
+		Value:   "sample-cclog-name",
+		EnvVars: []string{"CCLOG_NAME"},
 	}
 )
 
 func SentryFlags() []cli.Flag {
 	return []cli.Flag{
-		SentryDSN,
-		SentryLevel,
-		CCLogAddress,
-		CCLogName,
+		&SentryDSN,
+		&SentryLevel,
+		&CCLogAddress,
+		&CCLogName,
 	}
 }
 

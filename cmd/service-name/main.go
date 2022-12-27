@@ -10,7 +10,7 @@ import (
 	"github.com/KyberNetwork/go-project-template/internal/storage"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
 
