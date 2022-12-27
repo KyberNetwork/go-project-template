@@ -111,7 +111,7 @@ jobs:
       - name: Create tag
         run: |
           git tag -d "$VERSION_TAG" 2> /dev/null || echo "Release tag '$VERSION_TAG' does NOT exist"
-          git tag --annotate --message "go-project-template $VERSION_TAG" "$VERSION_TAG"
+          git tag --annotate --message "${{ env.SERVICE }} $VERSION_TAG" "$VERSION_TAG"
           git push origin "refs/tags/$VERSION_TAG"
 
       - name: Create release
@@ -120,4 +120,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.VERSION_TAG }}
           prerelease: false
-          name: "go-project-template ${{ env.VERSION_TAG }}"
+          name: "${{ env.SERVICE }} ${{ env.VERSION_TAG }}"
