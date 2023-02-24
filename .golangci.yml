@@ -17,3 +17,11 @@ linters:
     - exhaustruct
     - wsl
     - nlreturn
+    - deadcode
+    - ifshort
+    - structcheck
+    - nosnakecase
+    - varcheck
+    - sqlclosecheck
+    - rowserrcheck
+    - wastedassign

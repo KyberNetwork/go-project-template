@@ -22,11 +22,11 @@ jobs:
           INPUT_TAG: ${{ github.event.inputs.version }}
         run: |
           TAG=${INPUT_TAG#v}
-          echo "::set-output name=value::v$TAG"
+          echo "{value}={v$TAG}" >> $env.GITHUB_OUTPUT
       - name: Build date
         shell: bash
         id: build_date
-        run: echo "::set-output name=value::$(date +%FT%T%z)"
+        run: echo "{value}={($date +%FT%T%z)}" >> $env.GITHUB_OUTPUT
 
   docker:
     needs:
