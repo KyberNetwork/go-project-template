@@ -28,7 +28,7 @@ jobs:
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Extract branch
         shell: bash
@@ -50,12 +50,10 @@ jobs:
             REF_BRANCH=${REF/refs\/tags\//}
             BRANCH=$REF_BRANCH
           fi
-
-          echo "{value}={$BRANCH}" >> $env.GITHUB_OUTPUT
-
+          echo "::set-output name=value::$BRANCH"
       - name: Extract GitHub HEAD SHA
         id: head_sha
-        run: echo "{value}={$(git rev-parse HEAD)}" >> $env.GITHUB_OUTPUT
+        run: echo "::set-output name=value::$(git rev-parse HEAD)"
 
       - name: Get Docker image tag
         id: get_tag
@@ -64,8 +62,9 @@ jobs:
         run: |
           short_sha="$(git rev-parse --short HEAD)"
           branch_tag="$(echo "$CURRENT_BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/-$//g')"
-          echo "{image_tag}={$branch_tag-$short_sha}" >> $env.GITHUB_OUTPUT
-          echo "{branch_tag}={$branch_tag-$short_sha}" >> $env.GITHUB_OUTPUT
+          echo "::set-output name=image_tag::$branch_tag-$short_sha"
+          echo "::set-output name=branch_tag::$branch_tag-$short_sha"
+          echo "::set-output name=image_tag_for_awx::$branch_tag
   lint:
     name: Run golangci-lint
     runs-on: [ubuntu-22.04]
