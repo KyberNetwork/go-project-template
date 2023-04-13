@@ -79,31 +79,30 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: "1.19.x"
+          go-version: "1.20.x"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.50
           args: --config=.golangci.yml
           skip-pkg-cache: true
           skip-build-cache: true
 
   test:
     runs-on: [ubuntu-22.04]
-#    services:
-#      postgres:
-#        image: postgres:14-alpine
-#        env:
-#          POSTGRES_PASSWORD: test
-#          POSTGRES_USER: test
-#          POSTGRES_DB: test
-#        options: >-
-#          --health-cmd pg_isready
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#        ports:
-#          - 5432:5432
+    #    services:
+    #      postgres:
+    #        image: postgres:14-alpine
+    #        env:
+    #          POSTGRES_PASSWORD: test
+    #          POSTGRES_USER: test
+    #          POSTGRES_DB: test
+    #        options: >-
+    #          --health-cmd pg_isready
+    #          --health-interval 10s
+    #          --health-timeout 5s
+    #          --health-retries 5
+    #        ports:
+    #          - 5432:5432
     needs:
       - prepare
     steps:
@@ -118,8 +117,8 @@ jobs:
 
   docker:
     name: Docker
-    runs-on: [ ubuntu-22.04 ]
-    needs: [ prepare, lint, test ]
+    runs-on: [ubuntu-22.04]
+    needs: [prepare, lint, test]
     env:
       SERVICE: go-project-template
       BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
@@ -136,34 +135,34 @@ jobs:
           BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
         run: |
           ls -l
-#   ===== for docker.io =====
-#          DOCKER_REPO="kybernetwork/$SERVICE"
-#
-#          COMBINE_TAG="$DOCKER_REPO:$BRANCH_TAG-$COMMIT_TAG"
-#          echo "::set-output name=combine::$COMBINE_TAG"
-#
-#          IMAGE_WITH_BRANCH_TAG="$DOCKER_REPO:$BRANCH_TAG"
-#          echo "::set-output name=branch::$IMAGE_WITH_BRANCH_TAG"
-#
-#          [[ -n "$VERSION_TAG" ]] || exit 0
-#          IMAGE_WITH_VERSION_TAG="$DOCKER_REPO:$VERSION_TAG"
-#          echo "::set-output name=version::$IMAGE_WITH_VERSION_TAG"
+      #   ===== for docker.io =====
+      #          DOCKER_REPO="kybernetwork/$SERVICE"
+      #
+      #          COMBINE_TAG="$DOCKER_REPO:$BRANCH_TAG-$COMMIT_TAG"
+      #          echo "::set-output name=combine::$COMBINE_TAG"
+      #
+      #          IMAGE_WITH_BRANCH_TAG="$DOCKER_REPO:$BRANCH_TAG"
+      #          echo "::set-output name=branch::$IMAGE_WITH_BRANCH_TAG"
+      #
+      #          [[ -n "$VERSION_TAG" ]] || exit 0
+      #          IMAGE_WITH_VERSION_TAG="$DOCKER_REPO:$VERSION_TAG"
+      #          echo "::set-output name=version::$IMAGE_WITH_VERSION_TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@master
         if: github.event_name != 'pull_request'
-#   ===== for docker.io =====
-#      - name: Docker login
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKER_USERNAME }}
-#          password: ${{ secrets.DOCKER_TOKEN }}
-#        if: github.event_name != 'pull_request'
+      #   ===== for docker.io =====
+      #      - name: Docker login
+      #        uses: docker/login-action@v1
+      #        with:
+      #          username: ${{ secrets.DOCKER_USERNAME }}
+      #          password: ${{ secrets.DOCKER_TOKEN }}
+      #        if: github.event_name != 'pull_request'
 
       - name: Gcloud Auth
         uses: google-github-actions/auth@v0
         with:
-          credentials_json: '${{ secrets.GCR_CREDENTIALS }}'
+          credentials_json: "${{ secrets.GCR_CREDENTIALS }}"
 
       - name: Setup Gcloud SDK
         uses: google-github-actions/setup-gcloud@v0
@@ -188,10 +187,10 @@ jobs:
           tags: |
             ${{ needs.prepare.outputs.image_name }}:${{ needs.prepare.outputs.image_tag }}
             ${{ needs.prepare.outputs.image_name }}:${{ needs.prepare.outputs.branch_tag }}
-#            ===== for docker.io =====
-#            ${{ steps.images.outputs.branch }}
-#            ${{ steps.images.outputs.combine }}
-#            ${{ steps.images.outputs.version }}
+          #            ===== for docker.io =====
+          #            ${{ steps.images.outputs.branch }}
+          #            ${{ steps.images.outputs.combine }}
+          #            ${{ steps.images.outputs.version }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
         if: github.event_name != 'pull_request'

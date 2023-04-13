@@ -1,6 +1,6 @@
 module github.com/KyberNetwork/go-project-template
 
-go 1.19
+go 1.20
 
 require (
 	github.com/KyberNetwork/cclog v1.0.1
