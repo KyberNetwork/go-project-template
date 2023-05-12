@@ -28,7 +28,7 @@ jobs:
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Extract branch
         shell: bash
@@ -75,7 +75,7 @@ jobs:
       - name: Add git config for Go private module
         run: git config --global url."https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com/".insteadOf https://github.com/
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -107,7 +107,7 @@ jobs:
       - prepare
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
         uses: actions/setup-go@v2
         with:
@@ -124,7 +124,7 @@ jobs:
       BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Prepare images
         id: images
         shell: bash
