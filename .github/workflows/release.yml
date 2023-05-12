@@ -8,6 +8,8 @@ on:
         type: string
         required: true
 
+env:
+  SERVICE: go-project-template
 jobs:
   prepare:
     runs-on: [ubuntu-22.04]
@@ -22,17 +24,16 @@ jobs:
           INPUT_TAG: ${{ github.event.inputs.version }}
         run: |
           TAG=${INPUT_TAG#v}
-          echo "{value}={v$TAG}" >> $env.GITHUB_OUTPUT
+          echo "value=v$TAG" >> "$GITHUB_OUTPUT"
       - name: Build date
         shell: bash
         id: build_date
-        run: echo "{value}={($date +%FT%T%z)}" >> $env.GITHUB_OUTPUT
+        run: echo "value=($date +%FT%T%z)" >> "$GITHUB_OUTPUT"
 
   docker:
     needs:
       - prepare
     env:
-      SERVICE: go-project-template
       VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
       BUILD_DATE: ${{ needs.prepare.outputs.build_date }}
     runs-on: [ubuntu-22.04]

@@ -51,11 +51,11 @@ jobs:
             BRANCH=$REF_BRANCH
           fi
 
-          echo "{value}={$BRANCH}" >> $env.GITHUB_OUTPUT
+          echo "value=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Extract GitHub HEAD SHA
         id: head_sha
-        run: echo "{value}={$(git rev-parse HEAD)}" >> $env.GITHUB_OUTPUT
+        run: echo "value=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Get Docker image tag
         id: get_tag
@@ -64,8 +64,8 @@ jobs:
         run: |
           short_sha="$(git rev-parse --short HEAD)"
           branch_tag="$(echo "$CURRENT_BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/-$//g')"
-          echo "{image_tag}={$branch_tag-$short_sha}" >> $env.GITHUB_OUTPUT
-          echo "{branch_tag}={$branch_tag-$short_sha}" >> $env.GITHUB_OUTPUT
+          echo "image_tag=$branch_tag-$short_sha" >> "$GITHUB_OUTPUT"
+          echo "branch_tag=$branch_tag-$short_sha" >> "$GITHUB_OUTPUT"
   lint:
     name: Run golangci-lint
     runs-on: [ubuntu-22.04]
@@ -122,7 +122,6 @@ jobs:
     env:
       SERVICE: go-project-template
       BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
-      COMMIT_TAG: ${{ needs.prepare.outputs.commit_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -130,8 +129,6 @@ jobs:
         id: images
         shell: bash
         env:
-          COMMIT_TAG: ${{ needs.prepare.outputs.commit_tag }}
-          VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
           BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
         run: |
           ls -l
