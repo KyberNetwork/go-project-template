@@ -15,7 +15,7 @@ require (
 	github.com/lib/pq v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/shopspring/decimal v1.2.0
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.8.3
 	github.com/urfave/cli/v2 v2.10.2
 	go.uber.org/zap v1.20.0
 )
