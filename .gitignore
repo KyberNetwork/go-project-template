@@ -3,3 +3,4 @@ cmd/*/*
 !cmd/*/*.go
 */cmd/*/*
 !*/cmd/*/*.go
+.env

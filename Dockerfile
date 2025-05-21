@@ -1,5 +1,5 @@
 ## BUILDER
-FROM golang:1.17 as builder
+FROM golang:1.24 AS builder
 
 WORKDIR /src
 
@@ -9,7 +9,7 @@ RUN go build -o app ./cmd/service-name
 
 
 ## DEPLOY
-FROM debian:stretch
+FROM debian:bookworm
 
 RUN apt-get update && \
     apt install -y ca-certificates && \

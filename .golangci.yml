@@ -1,27 +1,40 @@
-run:
-  deadline: 5m
-
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    - maligned
-    - interfacer
-    - scopelint
-    - gomoddirectives
-    - nolintlint
-    - exhaustivestruct
-    - wrapcheck
-    - varnamelen
-    - golint
-    - paralleltest
+    - perfsprint
+    - depguard
     - exhaustruct
-    - wsl
+    - gomoddirectives
     - nlreturn
-    - deadcode
-    - ifshort
-    - structcheck
-    - nosnakecase
-    - varcheck
-    - sqlclosecheck
+    - nolintlint
+    - paralleltest
     - rowserrcheck
+    - sqlclosecheck
+    - varnamelen
     - wastedassign
+    - wrapcheck
+    - wsl
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
