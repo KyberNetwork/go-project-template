@@ -2,7 +2,6 @@ package httputil
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +23,7 @@ type HTTPTestCase struct {
 // RunHTTPTestCase run http request test case.
 func RunHTTPTestCase(t *testing.T, tc HTTPTestCase, handler http.Handler) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(context.Background(), tc.Method, tc.Endpoint, bytes.NewBuffer(tc.Body))
+	req, err := http.NewRequestWithContext(t.Context(), tc.Method, tc.Endpoint, bytes.NewBuffer(tc.Body))
 	if err != nil {
 		t.Fatal(err)
 	}

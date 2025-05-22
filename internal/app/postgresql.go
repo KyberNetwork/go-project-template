@@ -18,7 +18,7 @@ var (
 		Name:    "postgres-port",
 		Usage:   "PostgresSQL port to connect",
 		EnvVars: []string{"POSTGRES_PORT"},
-		Value:   5432, // nolint: gomnd
+		Value:   5432, // nolint: mnd
 	}
 	PostgresUser = cli.StringFlag{ // nolint: gochecknoglobals
 		Name:    "postgres-user",
