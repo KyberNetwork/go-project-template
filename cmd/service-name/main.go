@@ -20,7 +20,8 @@ func main() {
 	app.Name = "alert service go script runner"
 	app.Action = run
 
-	if err := app.Run(os.Args); err != nil {
+	err := app.Run(os.Args)
+	if err != nil {
 		log.Panic(err)
 	}
 }
@@ -49,7 +50,7 @@ func run(c *cli.Context) error {
 }
 
 func initDB(c *cli.Context) (*sqlx.DB, error) {
-	db, err := libapp.NewDB(map[string]interface{}{
+	db, err := libapp.NewDB(map[string]any{
 		"host":     c.String(libapp.PostgresHost.Name),
 		"port":     c.Int(libapp.PostgresPort.Name),
 		"user":     c.String(libapp.PostgresUser.Name),
@@ -66,5 +67,6 @@ func initDB(c *cli.Context) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return db, nil
 }

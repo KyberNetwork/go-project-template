@@ -44,23 +44,28 @@ func IntToWei(amount int64, decimals int64) *big.Int {
 	weiFloat := big.NewInt(amount)
 	decimalsBig := Exp10(decimals)
 	amountBig := new(big.Int).Mul(weiFloat, decimalsBig)
+
 	return amountBig
 }
 
 func RoundUp(value float64, tickSize float64) float64 {
 	decs := int32(math.Abs(math.Round(math.Log10(tickSize))))
 	v := decimal.NewFromFloat(value)
+
 	rec := v.Round(decs)
 	if rec.LessThan(v) {
 		rec = rec.Add(decimal.NewFromFloat(tickSize))
 	}
+
 	r, _ := rec.Float64()
+
 	return r
 }
 
 func RoundDown(value float64, tickSize float64) float64 {
 	decs := int32(math.Abs(math.Round(math.Log10(tickSize))))
 	v := decimal.NewFromFloat(value)
+
 	rec := v.Round(decs)
 	if rec.GreaterThan(v) {
 		rec = rec.Sub(decimal.NewFromFloat(tickSize))
@@ -68,6 +73,8 @@ func RoundDown(value float64, tickSize float64) float64 {
 			rec = decimal.NewFromInt(0)
 		}
 	}
+
 	r, _ := rec.Float64()
+
 	return r
 }
