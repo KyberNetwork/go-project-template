@@ -34,7 +34,8 @@ func New(bindAddr string) *Server {
 
 // Run runs server.
 func (s *Server) Run() error {
-	if err := s.s.Run(s.bindAddr); err != nil {
+	err := s.s.Run(s.bindAddr)
+	if err != nil {
 		return fmt.Errorf("run server: %w", err)
 	}
 

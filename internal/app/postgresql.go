@@ -61,8 +61,9 @@ func PostgresSQLFlags(defaultDB string) []cli.Flag {
 }
 
 // NewDB creates a DB instance from cli flags configuration.
-func NewDB(specs map[string]interface{}) (*sqlx.DB, error) {
+func NewDB(specs map[string]any) (*sqlx.DB, error) {
 	const driverName = "postgres"
+
 	connStr := dbutil.FormatDSN(specs)
 
 	return sqlx.Connect(driverName, connStr)

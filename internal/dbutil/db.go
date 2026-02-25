@@ -25,12 +25,13 @@ func NewDB(dsn string) (*sqlx.DB, error) {
 }
 
 // FormatDSN ..
-func FormatDSN(props map[string]interface{}) string {
+func FormatDSN(props map[string]any) string {
 	var s strings.Builder
+
 	for k, v := range props {
 		s.WriteString(k)
 		s.WriteString("=")
-		s.WriteString(fmt.Sprintf("%+v", v))
+		fmt.Fprintf(&s, "%+v", v)
 		s.WriteString(" ")
 	}
 
@@ -52,7 +53,8 @@ func RunMigrationUp(db *sql.DB, migrationFolderPath, databaseName string) (*migr
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
-	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 

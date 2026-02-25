@@ -20,7 +20,7 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 	defaultUser := "test"
 	defaultPassword := "test"
 
-	dsn := dbutil.FormatDSN(map[string]interface{}{
+	dsn := dbutil.FormatDSN(map[string]any{
 		"host":     defaultHost,
 		"port":     defaultPort,
 		"user":     defaultUser,
@@ -32,12 +32,15 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 	if err != nil {
 		panic(err)
 	}
+
 	ddlDB.MustExec(fmt.Sprintf(`CREATE DATABASE "%s"`, dbName))
-	if err := ddlDB.Close(); err != nil {
+
+	err = ddlDB.Close()
+	if err != nil {
 		panic(err)
 	}
 
-	dsnWithDB := dbutil.FormatDSN(map[string]interface{}{
+	dsnWithDB := dbutil.FormatDSN(map[string]any{
 		"host":     defaultHost,
 		"port":     defaultPort,
 		"user":     defaultUser,
@@ -57,16 +60,21 @@ func MustNewDevelopmentDB(migrationPath string) (*sqlx.DB, func() error) {
 	}
 
 	return db, func() error {
-		if _, err := m.Close(); err != nil {
+		_, err := m.Close()
+		if err != nil {
 			return err
 		}
+
 		ddlDB, err := dbutil.NewDB(dsn)
 		if err != nil {
 			return err
 		}
-		if _, err = ddlDB.Exec(fmt.Sprintf(`DROP DATABASE "%s"`, dbName)); err != nil {
+
+		_, err = ddlDB.Exec(fmt.Sprintf(`DROP DATABASE "%s"`, dbName))
+		if err != nil {
 			return err
 		}
+
 		return ddlDB.Close()
 	}
 }
